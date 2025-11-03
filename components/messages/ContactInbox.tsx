@@ -7,6 +7,7 @@ import { useContactInbox } from '@/hooks/useContactInbox'
 import { useMarkAsRead } from '@/hooks/useMarkAsRead'
 import { ChannelSelector } from './ChannelSelector'
 import { ScheduleMessageModal } from './ScheduleMessageModal'
+import { ContactProfileModal } from './ContactProfileModal'
 
 interface ContactInboxProps {
   selectedChannel: 'sms' | 'whatsapp' | 'email' | 'all'
@@ -16,6 +17,7 @@ export function ContactInbox({ selectedChannel }: ContactInboxProps) {
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const { markAsRead } = useMarkAsRead()
   const [isScheduleModalOpen, setIsScheduleModalOpen] = useState(false)
+  const [isProfileModalOpen, setIsProfileModalOpen] = useState(false)
   
   const {
     filteredContacts,
@@ -196,8 +198,12 @@ export function ContactInbox({ selectedChannel }: ContactInboxProps) {
                     </p>
                   </div>
                 </div>
-                <button className="p-2 hover:bg-muted rounded-lg">
-                  <MoreHorizontal className="h-4 w-4" />
+                <button 
+                  onClick={() => setIsProfileModalOpen(true)}
+                  className="p-2 hover:bg-muted rounded-lg transition-colors"
+                  title="View contact profile"
+                >
+                  <User className="h-4 w-4" />
                 </button>
               </div>
             </div>
@@ -339,6 +345,18 @@ export function ContactInbox({ selectedChannel }: ContactInboxProps) {
           </div>
         )}
       </div>
+      
+      <ContactProfileModal
+        isOpen={isProfileModalOpen}
+        onClose={() => setIsProfileModalOpen(false)}
+        contact={selectedContact || null}
+        messages={conversation}
+        onSendMessage={() => {
+          setIsProfileModalOpen(false)
+          // Focus on message input when closing modal
+          document.querySelector<HTMLInputElement>('input[type="text"]')?.focus()
+        }}
+      />
     </div>
   )
 }
