@@ -1,11 +1,12 @@
 "use client"
 
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Clock, CheckCircle, XCircle, AlertCircle, Phone, Mail, MessageCircle, MoreHorizontal, User, Calendar, Send, Check } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useContactInbox } from '@/hooks/useContactInbox'
 import { useMarkAsRead } from '@/hooks/useMarkAsRead'
 import { ChannelSelector } from './ChannelSelector'
+import { ScheduleMessageModal } from './ScheduleMessageModal'
 
 interface ContactInboxProps {
   selectedChannel: 'sms' | 'whatsapp' | 'email' | 'all'
@@ -14,6 +15,7 @@ interface ContactInboxProps {
 export function ContactInbox({ selectedChannel }: ContactInboxProps) {
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const { markAsRead } = useMarkAsRead()
+  const [isScheduleModalOpen, setIsScheduleModalOpen] = useState(false)
   
   const {
     filteredContacts,
@@ -265,6 +267,19 @@ export function ContactInbox({ selectedChannel }: ContactInboxProps) {
                   }}
                 />
                 <button
+                  onClick={() => setIsScheduleModalOpen(true)}
+                  disabled={!messageText.trim()}
+                  className={cn(
+                    "px-4 py-2 rounded-lg transition-colors border",
+                    messageText.trim()
+                      ? "border-primary text-primary hover:bg-primary/10"
+                      : "border-muted text-muted-foreground cursor-not-allowed"
+                  )}
+                  title="Schedule message"
+                >
+                  <Clock className="h-4 w-4" />
+                </button>
+                <button
                   onClick={handleSendMessage}
                   disabled={!messageText.trim()}
                   className={cn(
@@ -278,6 +293,37 @@ export function ContactInbox({ selectedChannel }: ContactInboxProps) {
                 </button>
               </div>
             </div>
+            
+            <ScheduleMessageModal
+              isOpen={isScheduleModalOpen}
+              onClose={() => setIsScheduleModalOpen(false)}
+              onSchedule={async (scheduledAt) => {
+                // Schedule the message
+                if (!selectedContact) return
+                
+                try {
+                  const response = await fetch('/api/messages/schedule', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                      contactId: selectedContact.id,
+                      channel: selectedContact.lastMessage?.channel || 'SMS',
+                      content: messageText,
+                      to: selectedContact.phone || selectedContact.email,
+                      scheduledAt: scheduledAt.toISOString()
+                    })
+                  })
+                  
+                  if (response.ok) {
+                    setMessageText('')
+                    alert('Message scheduled successfully!')
+                  }
+                } catch (error) {
+                  console.error('Failed to schedule message:', error)
+                  alert('Failed to schedule message')
+                }
+              }}
+            />
           </>
         ) : (
           <div className="flex items-center justify-center h-full">
