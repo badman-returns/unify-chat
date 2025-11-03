@@ -16,7 +16,7 @@ dist/
 
 # Environment variables
 .env
-.env.local
+# .env.local
 .env.development.local
 .env.test.local
 .env.production.local
@@ -51,6 +51,7 @@ prisma/migrations/
 *.temp
 
 # Documentation (will create custom versions later)
-README.md
+# README.md
 TWILIO_SETUP.md
 PROGRESS.md
+# requirement.txt
