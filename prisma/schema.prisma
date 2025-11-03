@@ -1,0 +1,204 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  VIEWER
+  EDITOR
+  ADMIN
+  OWNER
+}
+
+enum Channel {
+  SMS
+  WHATSAPP
+  EMAIL
+  VOICE
+}
+
+enum MessageDirection {
+  INBOUND
+  OUTBOUND
+}
+
+enum MessageStatus {
+  PENDING
+  SENT
+  DELIVERED
+  READ
+  FAILED
+}
+
+model User {
+  id            String    @id @default(cuid())
+  name          String?
+  email         String    @unique
+  emailVerified Boolean   @default(false)
+  image         String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  
+  // Custom fields
+  role      Role     @default(EDITOR)
+  teamId    String?
+  firstName String?
+  lastName  String?
+
+  team     Team?     @relation(fields: [teamId], references: [id], onDelete: SetNull)
+  accounts Account[]
+  sessions Session[]
+  messages Message[]
+  notes    Note[]
+
+  @@map("user")
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String  @map("user_id")
+  type              String  @default("oauth")
+  providerId        String  @map("provider_id")
+  accountId         String  @map("account_id")
+  password          String? @db.Text
+  accessToken       String? @map("access_token") @db.Text
+  refreshToken      String? @map("refresh_token") @db.Text
+  idToken           String? @map("id_token") @db.Text
+  accessTokenExpiresAt DateTime? @map("access_token_expires_at")
+  refreshTokenExpiresAt DateTime? @map("refresh_token_expires_at")
+  scope             String?
+  tokenType         String? @map("token_type")
+  createdAt         DateTime @default(now()) @map("created_at")
+  updatedAt         DateTime @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([providerId, accountId])
+  @@map("account")
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  token        String   @unique @map("session_token")
+  userId       String   @map("user_id")
+  expiresAt    DateTime @map("expires_at")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+  ipAddress    String?  @map("ip_address")
+  userAgent    String?  @map("user_agent")
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("session")
+}
+
+model Verification {
+  id         String   @id @default(cuid())
+  identifier String
+  value      String
+  expiresAt  DateTime @map("expires_at")
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+
+  @@unique([identifier, value])
+  @@map("verification")
+}
+
+model Team {
+  id        String   @id @default(cuid())
+  name      String
+  slug      String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  users        User[]
+  contacts     Contact[]
+  messages     Message[]
+  integrations Integration[]
+  notes        Note[]
+
+  @@map("team")
+}
+
+model Contact {
+  id            String    @id @default(cuid())
+  name          String?
+  phone         String?
+  email         String?
+  socialHandles Json?
+  tags          String[]
+  lastContactAt DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  teamId        String
+
+  team     Team      @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  messages Message[]
+  notes    Note[]
+
+  @@index([teamId, phone])
+  @@index([teamId, email])
+  @@index([teamId, createdAt])
+  @@map("contact")
+}
+
+model Message {
+  id          String           @id @default(cuid())
+  content     String           @db.Text
+  channel     Channel
+  direction   MessageDirection
+  status      MessageStatus    @default(SENT)
+  metadata    Json?
+  attachments String[]
+  scheduledAt DateTime?
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+  contactId   String
+  userId      String
+  teamId      String
+
+  contact Contact @relation(fields: [contactId], references: [id], onDelete: Cascade)
+  user    User    @relation(fields: [userId], references: [id])
+  team    Team    @relation(fields: [teamId], references: [id], onDelete: Cascade)
+
+  @@index([teamId, contactId, createdAt])
+  @@index([teamId, channel, createdAt])
+  @@index([scheduledAt])
+  @@map("message")
+}
+
+model Note {
+  id        String   @id @default(cuid())
+  content   String   @db.Text
+  isPrivate Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  contactId String
+  userId    String
+  teamId    String
+
+  contact Contact @relation(fields: [contactId], references: [id], onDelete: Cascade)
+  user    User    @relation(fields: [userId], references: [id])
+  team    Team    @relation(fields: [teamId], references: [id], onDelete: Cascade)
+
+  @@index([teamId, contactId, createdAt])
+  @@map("note")
+}
+
+model Integration {
+  id          String   @id @default(cuid())
+  type        String
+  credentials Json
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  teamId      String
+
+  team Team @relation(fields: [teamId], references: [id], onDelete: Cascade)
+
+  @@index([teamId, type])
+  @@map("integration")
+}
