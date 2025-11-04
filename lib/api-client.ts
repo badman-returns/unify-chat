@@ -93,7 +93,9 @@ export interface SendMessageResponse {
   messageId?: string
   channel: string
   to: string
+  latency: number
   metadata?: Record<string, any>
+  message?: any
   error?: string
 }
 
@@ -154,8 +156,37 @@ export interface IntegrationAnalysis {
 export const messageApi = {
   send: (data: SendMessageRequest): Promise<SendMessageResponse> =>
     apiClient.post('/messages/send', data),
-  getByContactId: (contactId: string): Promise<{ success: boolean; messages: any[] }> =>
-    apiClient.get(`/messages/${contactId}`),
+  async getByContactId(contactId: string, cursor?: string | null, limit: number = 30) {
+    try {
+      const params = new URLSearchParams()
+      if (cursor) params.append('cursor', cursor)
+      params.append('limit', limit.toString())
+      
+      const response = await fetch(`/api/messages/${contactId}?${params}`)
+      
+      if (!response.ok) {
+        return {
+          messages: [],
+          nextCursor: null,
+          hasMore: false
+        }
+      }
+      
+      const data = await response.json()
+      return {
+        messages: data.messages || [],
+        nextCursor: data.nextCursor || null,
+        hasMore: data.hasMore || false
+      }
+    } catch (error) {
+      console.error('Error fetching messages:', error)
+      return {
+        messages: [],
+        nextCursor: null,
+        hasMore: false
+      }
+    }
+  },
   updateStatus: (messageId: string, status: string): Promise<{ success: boolean }> =>
     apiClient.patch(`/messages/message/${messageId}/status`, { status }),
   markAsRead: (contactId: string): Promise<{ success: boolean }> =>

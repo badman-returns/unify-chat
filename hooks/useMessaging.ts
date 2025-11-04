@@ -8,6 +8,23 @@ import { useMessagesQuery, useSendMessageMutation } from './queries/useMessagesQ
 import { useQueryClient } from '@tanstack/react-query'
 import { getMessagesQueryKey } from './queries/useMessagesQuery'
 
+/**
+ * Represents a message in the messaging system
+ * 
+ * @typedef {Object} Message
+ * @property {string} id Unique message ID
+ * @property {string} contactId Contact ID associated with the message
+ * @property {'sms' | 'whatsapp' | 'email'} channel Channel used for the message
+ * @property {'inbound' | 'outbound'} direction Direction of the message
+ * @property {string} from Sender's phone number or email
+ * @property {string} to Recipient's phone number or email
+ * @property {string} content Message content
+ * @property {'pending' | 'sent' | 'delivered' | 'read' | 'failed' | 'scheduled'} status Message status
+ * @property {Date} timestamp Timestamp of the message
+ * @property {Date} [scheduledAt] Scheduled timestamp of the message
+ * @property {string[]} [attachments] Attachments associated with the message
+ * @property {Record<string, any>} [metadata] Additional metadata for the message
+ */
 export interface Message {
   id: string
   contactId: string
@@ -16,8 +33,10 @@ export interface Message {
   from: string
   to: string
   content: string
-  status: 'pending' | 'sent' | 'delivered' | 'read' | 'failed'
+  status: 'pending' | 'sent' | 'delivered' | 'read' | 'failed' | 'scheduled'
   timestamp: Date
+  scheduledAt?: Date
+  attachments?: string[]
   metadata?: Record<string, any>
 }
 
@@ -31,50 +50,81 @@ export interface MessagingRepository {
   clearError: () => void
 }
 
-export function useMessaging(): MessagingRepository {
+export function useMessaging(): MessagingRepository & { fetchNextPage?: () => void; hasMore?: boolean; isFetchingMore?: boolean; typingContacts?: Set<string> } {
   const [currentContactId, setCurrentContactId] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [typingContacts, setTypingContacts] = useState<Set<string>>(new Set())
   
   const queryClient = useQueryClient()
-  const { data: queryMessages, isLoading } = useMessagesQuery(currentContactId || '')
+  const { 
+    data: queryData, 
+    isLoading, 
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage
+  } = useMessagesQuery(currentContactId || '')
   const sendMessageMutation = useSendMessageMutation()
 
-  // Convert React Query data to our format
-  const messages: Message[] = queryMessages?.messages?.map((msg: any) => ({
-    id: msg.id,
-    contactId: msg.contactId,
-    channel: (msg.channel || 'sms').toLowerCase() as 'sms' | 'whatsapp' | 'email',
-    direction: (msg.direction || 'inbound').toLowerCase() as 'inbound' | 'outbound',
-    from: msg.from || 'unknown',
-    to: msg.to || 'unknown',
-    content: msg.content || '',
-    status: (msg.status || 'delivered').toLowerCase() as 'pending' | 'sent' | 'delivered' | 'read' | 'failed',
-    timestamp: safeParseDate(msg.createdAt || msg.timestamp),
-    metadata: msg.metadata
-  })) || []
+  const messages: Message[] = (queryData?.pages || []).flatMap(page => 
+    (page?.messages || []).map((msg: any) => {
+      if (!msg.id) {
+        console.error('⚠️ Message with no ID found:', msg)
+      }
+      return {
+        id: msg.id,
+        contactId: msg.contactId,
+        channel: (msg.channel || 'sms').toLowerCase() as 'sms' | 'whatsapp' | 'email',
+        direction: (msg.direction || 'inbound').toLowerCase() as 'inbound' | 'outbound',
+        from: msg.from || 'unknown',
+        to: msg.to || 'unknown',
+        content: msg.content || '',
+        status: (msg.status || 'delivered').toLowerCase() as 'pending' | 'sent' | 'delivered' | 'read' | 'failed' | 'scheduled',
+        timestamp: safeParseDate(msg.createdAt || msg.timestamp),
+        scheduledAt: msg.scheduledAt ? safeParseDate(msg.scheduledAt) : undefined,
+        attachments: msg.attachments || [],
+        metadata: msg.metadata
+      }
+    }).filter(msg => msg.id)
+  ).reverse()
 
-  // Handle real-time message updates via SSE
   const handleMessageReceived = useCallback((message: any) => {
-    // Invalidate and refetch messages for the affected contact
-    if (message.contactId) {
-      queryClient.invalidateQueries({ 
-        queryKey: getMessagesQueryKey(message.contactId) 
-      })
+    if (!message.contactId) return
+    
+    const messageId = message.id || message.messageId
+    if (!messageId) {
+      console.error('⚠️ WebSocket message without ID:', message)
+      return
     }
+    
+    const normalizedMessage = {
+      ...message,
+      id: messageId
+    }
+    
+    queryClient.invalidateQueries({ queryKey: getMessagesQueryKey(message.contactId) })
   }, [queryClient])
 
   const handleMessageSent = useCallback((message: any) => {
-    // Invalidate and refetch messages for the affected contact
-    if (message.contactId) {
-      queryClient.invalidateQueries({ 
-        queryKey: getMessagesQueryKey(message.contactId) 
-      })
-    }
+    if (!message.contactId) return
+    queryClient.invalidateQueries({ queryKey: getMessagesQueryKey(message.contactId) })
   }, [queryClient])
+
+  const handleTyping = useCallback((data: { contactId: string; isTyping: boolean }) => {
+    setTypingContacts(prev => {
+      const next = new Set(prev)
+      if (data.isTyping) {
+        next.add(data.contactId)
+      } else {
+        next.delete(data.contactId)
+      }
+      return next
+    })
+  }, [])
 
   useEvents({
     onMessageReceived: handleMessageReceived,
-    onMessageSent: handleMessageSent
+    onMessageSent: handleMessageSent,
+    onTyping: handleTyping
   })
 
   const sendMessage = async (data: SendMessageRequest): Promise<SendMessageResponse> => {
@@ -94,8 +144,6 @@ export function useMessaging(): MessagingRepository {
   }
 
   const getConversation = (contactId: string): Message[] => {
-    // Always return messages if we have data for this contact
-    // React Query will handle the data fetching automatically
     if (currentContactId === contactId) {
       return messages
     }
@@ -111,6 +159,10 @@ export function useMessaging(): MessagingRepository {
     sendMessage,
     getConversation,
     loadConversation,
-    clearError
+    clearError,
+    fetchNextPage,
+    hasMore: hasNextPage,
+    isFetchingMore: isFetchingNextPage,
+    typingContacts
   }
 }

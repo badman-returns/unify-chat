@@ -1,15 +1,31 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { useQuery, useInfiniteQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { messageApi } from '@/lib/api-client'
 
 export const MESSAGES_QUERY_KEY = ['messages']
 export const getMessagesQueryKey = (contactId: string) => [...MESSAGES_QUERY_KEY, contactId]
 
 export function useMessagesQuery(contactId: string) {
-  return useQuery({
+  return useInfiniteQuery({
     queryKey: getMessagesQueryKey(contactId),
-    queryFn: () => messageApi.getByContactId(contactId),
+    queryFn: async ({ pageParam }) => {
+      try {
+        const result = await messageApi.getByContactId(contactId, pageParam)
+        return result || { messages: [], nextCursor: null, hasMore: false }
+      } catch (error) {
+        console.error('Error fetching messages:', error)
+        return { messages: [], nextCursor: null, hasMore: false }
+      }
+    },
     enabled: !!contactId,
-    staleTime: 30 * 1000, // 30 seconds
+    staleTime: 5000,
+    refetchOnMount: true,
+    refetchOnWindowFocus: false,
+    initialPageParam: undefined as string | undefined,
+    getNextPageParam: (lastPage) => {
+      if (!lastPage) return undefined
+      return lastPage.hasMore ? lastPage.nextCursor : undefined
+    },
+    retry: 1,
   })
 }
 
@@ -41,9 +57,21 @@ export function useSendMessageMutation() {
       }
       
       queryClient.setQueryData(queryKey, (old: any) => {
-        if (!old) return { success: true, messages: [optimisticMessage] }
-        if (!old.messages) return { success: true, messages: [optimisticMessage] }
-        return { ...old, messages: [...old.messages, optimisticMessage] }
+        if (!old || !old.pages || !Array.isArray(old.pages)) {
+          return {
+            pages: [{ messages: [optimisticMessage], nextCursor: null, hasMore: false }],
+            pageParams: [undefined]
+          }
+        }
+        const newPages = [...old.pages]
+        const firstPage = newPages[0]
+        if (firstPage && Array.isArray(firstPage.messages)) {
+          newPages[0] = {
+            ...firstPage,
+            messages: [optimisticMessage, ...firstPage.messages]
+          }
+        }
+        return { ...old, pages: newPages }
       })
       
       return { previousMessages, contactId, optimisticMessage }
@@ -51,28 +79,36 @@ export function useSendMessageMutation() {
     onSuccess: (data, variables, context) => {
       if (!context?.contactId) return
       
+      if (!data || typeof data !== 'object') return
+      
+      const actualMessage = data.message || data
+      
+      if (!actualMessage.id) {
+        console.error('⚠️ Mutation returned invalid message:', data)
+        return
+      }
+      
       const queryKey = getMessagesQueryKey(context.contactId)
       queryClient.setQueryData(queryKey, (old: any) => {
-        if (!old) return { success: true, messages: [data] }
-        if (!old.messages) return { success: true, messages: [data] }
-        return {
-          ...old,
-          messages: old.messages.map((msg: any) => 
-            msg.id === context.optimisticMessage.id ? data : msg
-          )
+        if (!old || !old.pages || !Array.isArray(old.pages)) {
+          return {
+            pages: [{ messages: [actualMessage], nextCursor: null, hasMore: false }],
+            pageParams: [undefined]
+          }
         }
+        const newPages = old.pages.map((page: any) => ({
+          ...page,
+          messages: page.messages?.map((msg: any) => 
+            msg.id === context.optimisticMessage.id ? actualMessage : msg
+          ) || []
+        }))
+        return { ...old, pages: newPages }
       })
     },
     onError: (err, variables, context) => {
       if (!context?.contactId) return
       const queryKey = getMessagesQueryKey(context.contactId)
       queryClient.setQueryData(queryKey, context.previousMessages)
-    },
-    onSettled: (data, error, variables, context) => {
-      if (!context?.contactId) return
-      queryClient.invalidateQueries({ 
-        queryKey: getMessagesQueryKey(context.contactId) 
-      })
     },
   })
 }
@@ -84,7 +120,6 @@ export function useUpdateMessageStatusMutation() {
     mutationFn: ({ messageId, status }: { messageId: string; status: string }) =>
       messageApi.updateStatus(messageId, status),
     onMutate: async ({ messageId, status }) => {
-      // Update all message queries that might contain this message
       const queryCache = queryClient.getQueryCache()
       const messageQueries = queryCache.findAll({ 
         queryKey: MESSAGES_QUERY_KEY,
