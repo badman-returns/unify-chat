@@ -1,4 +1,4 @@
-import sgMail from '@sendgrid/mail'
+import { Resend } from 'resend'
 import { 
   IntegrationAdapter, 
   BaseMessage, 
@@ -7,47 +7,61 @@ import {
   ChannelConfig 
 } from './types'
 
+/**
+ * Email integration adapter using Resend API
+ * Handles professional email sending with HTML formatting and webhook processing
+ * Provides reliable transactional email delivery with tracking
+ * @implements {IntegrationAdapter}
+ */
 export class EmailAdapter implements IntegrationAdapter {
   channel = 'email' as const
-  name = 'SendGrid Email'
+  name = 'Resend Email'
   private initialized = false
+  private resend: Resend | null = null
 
   constructor(private config: ChannelConfig) {
     if (this.validateConfig(config)) {
-      sgMail.setApiKey(config.credentials.apiKey)
+      this.resend = new Resend(config.credentials.apiKey)
       this.initialized = true
     }
   }
 
+  /**
+   * Send an email via Resend API
+   * Automatically formats content as HTML and includes plain text fallback
+   * @param request - Message send request with content, recipient, and optional subject
+   * @returns Response with success status and Resend email ID
+   */
   async sendMessage(request: SendMessageRequest): Promise<SendMessageResponse> {
-    if (!this.initialized) {
+    if (!this.initialized || !this.resend) {
       return {
         success: false,
-        error: 'Email client not initialized. Check SendGrid API key.'
+        error: 'Email client not initialized. Check Resend API key.'
       }
     }
 
     try {
-      const msg = {
-        to: request.to,
+      const { data, error } = await this.resend.emails.send({
         from: request.from || this.config.credentials.fromEmail,
+        to: [request.to],
         subject: request.metadata?.subject || 'Message from UnifyChat',
         text: request.content,
-        html: this.formatHtmlContent(request.content),
-        trackingSettings: {
-          clickTracking: { enable: true },
-          openTracking: { enable: true }
+        html: this.formatHtmlContent(request.content)
+      })
+
+      if (error) {
+        return {
+          success: false,
+          error: error.message || 'Failed to send email',
+          metadata: { error }
         }
       }
 
-      const [response] = await sgMail.send(msg)
-
       return {
         success: true,
-        messageId: response.headers['x-message-id'] || 'unknown',
+        messageId: data?.id || 'unknown',
         metadata: {
-          statusCode: response.statusCode,
-          headers: response.headers
+          emailId: data?.id
         }
       }
     } catch (error: any) {
@@ -56,13 +70,19 @@ export class EmailAdapter implements IntegrationAdapter {
         error: error.message || 'Failed to send email',
         metadata: { 
           error,
-          code: error.code,
-          response: error.response?.body
+          code: error.code
         }
       }
     }
   }
 
+  /**
+   * Process incoming email webhook (SendGrid/Resend format)
+   * Handles inbound emails and delivery status updates
+   * Note: Resend webhooks provide metadata only, not full email body
+   * @param payload - Email webhook payload
+   * @returns Normalized message object or null if invalid
+   */
   async handleWebhook(payload: any): Promise<BaseMessage | null> {
     try {
       const events = Array.isArray(payload) ? payload : [payload]
@@ -122,6 +142,11 @@ export class EmailAdapter implements IntegrationAdapter {
     }
   }
 
+  /**
+   * Validate email configuration
+   * @param config - Channel configuration object
+   * @returns True if API key and from email are present
+   */
   validateConfig(config: ChannelConfig): boolean {
     return !!(
       config.enabled &&
@@ -130,6 +155,10 @@ export class EmailAdapter implements IntegrationAdapter {
     )
   }
 
+  /**
+   * Get email channel information and capabilities
+   * @returns Channel metadata including pricing and features
+   */
   getChannelInfo() {
     return {
       name: 'Email',
@@ -151,6 +180,11 @@ export class EmailAdapter implements IntegrationAdapter {
     }
   }
 
+  /**
+   * Convert plain text to formatted HTML email
+   * @param textContent - Plain text message content
+   * @returns HTML-formatted email with UnifyChat branding
+   */
   private formatHtmlContent(textContent: string): string {
     return `
       <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
@@ -165,11 +199,21 @@ export class EmailAdapter implements IntegrationAdapter {
     `
   }
 
+  /**
+   * Remove HTML tags from content
+   * @param html - HTML string
+   * @returns Plain text without HTML tags
+   */
   private stripHtml(html: string): string {
     if (!html) return ''
     return html.replace(/<[^>]*>/g, '').trim()
   }
 
+  /**
+   * Map SendGrid/Resend event type to standardized message status
+   * @param eventType - Event type (delivered, open, bounce, etc.)
+   * @returns Normalized status (sent, delivered, read, failed, pending)
+   */
   private mapSendGridStatus(eventType: string): BaseMessage['status'] {
     switch (eventType?.toLowerCase()) {
       case 'processed':

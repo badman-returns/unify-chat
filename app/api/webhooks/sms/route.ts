@@ -1,19 +1,32 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { ContactService } from '@/lib/db/contact'
 import { MessageService } from '@/lib/db/message'
-import { broadcastToSSE } from '@/lib/sse'
+import { recordMessageMetrics } from '@/lib/metrics-collector'
+import { broadcastMessageReceived, broadcastTypingIndicator } from '@/lib/websocket-broadcast'
 
 export async function POST(request: NextRequest) {
   try {
     const body = await request.text()
     const params = new URLSearchParams(body)
     
+    let profileName = params.get('ProfileName') || ''
+    const channelMetadata = params.get('ChannelMetadata')
+    
+    if (channelMetadata && !profileName) {
+      try {
+        const metadata = JSON.parse(channelMetadata)
+        profileName = metadata.data?.context?.ProfileName || ''
+      } catch (e) {
+      }
+    }
+    
     const inboundMessage = {
       from: params.get('From'),
       to: params.get('To'),
       content: params.get('Body'),
-      messageId: params.get('MessageSid'),
-      timestamp: new Date()
+      messageId: params.get('MessageSid') || params.get('SmsMessageSid'),
+      timestamp: new Date(),
+      profileName: profileName
     }
 
     if (!inboundMessage.from || !inboundMessage.content) {
@@ -25,9 +38,12 @@ export async function POST(request: NextRequest) {
 
     const contact = await ContactService.findOrCreateFromWebhook({
       phone: inboundMessage.from!,
+      name: inboundMessage.profileName,
       channel: 'SMS',
       teamId
     })
+
+    broadcastTypingIndicator(contact.id, true)
 
     const message = await MessageService.create({
       content: inboundMessage.content!,
@@ -38,23 +54,30 @@ export async function POST(request: NextRequest) {
         messageId: inboundMessage.messageId,
         from: inboundMessage.from,
         to: inboundMessage.to,
-        timestamp: inboundMessage.timestamp
+        timestamp: inboundMessage.timestamp,
+        profileName: inboundMessage.profileName
       },
       contactId: contact.id,
       userId,
       teamId
     })
 
-    broadcastToSSE({
-      type: 'contactCreated',
-      data: contact,
-      timestamp: Date.now()
+    broadcastTypingIndicator(contact.id, false)
+
+    broadcastMessageReceived({
+      id: message.id,
+      contactId: contact.id,
+      channel: 'SMS',
+      direction: 'INBOUND',
+      content: message.content,
+      createdAt: message.createdAt
     })
-    
-    broadcastToSSE({
-      type: 'messageReceived',
-      data: message,
-      timestamp: Date.now()
+
+    recordMessageMetrics({
+      messageId: message.id,
+      channel: 'SMS',
+      direction: 'inbound',
+      status: 'delivered'
     })
 
     return NextResponse.json({ 

@@ -1,13 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { ContactService } from '@/lib/db/contact'
 import { MessageService } from '@/lib/db/message'
-import { broadcastToSSE } from '@/lib/sse'
 import { recordMessageMetrics } from '@/lib/metrics-collector'
+import { mediaStorage } from '@/lib/media-storage'
+import { broadcastMessageReceived, broadcastContactCreated, broadcastTypingIndicator } from '@/lib/websocket-broadcast'
+import twilio from 'twilio'
 
 export async function POST(request: NextRequest) {
   try {
     const body = await request.text()
     const params = new URLSearchParams(body)
+    
     
     const rawFrom = params.get('From') || ''
     const rawTo = params.get('To') || ''
@@ -28,16 +31,69 @@ export async function POST(request: NextRequest) {
     const waId = params.get('WaId')
     const phoneNumber = waId ? `+${waId}` : cleanFrom
     
+    const messageType = params.get('MessageType')
+    const messageSid = params.get('MessageSid')
+    const numMedia = parseInt(params.get('NumMedia') || '0')
+    const mediaUrls: string[] = []
+    const mediaTypes: string[] = []
+
+    const twilioClient = twilio(
+      process.env.TWILIO_ACCOUNT_SID!,
+      process.env.TWILIO_AUTH_TOKEN!
+    )
+
+    if (messageType === 'document' && messageSid) {
+      try {
+        const message = await twilioClient.messages(messageSid).fetch()
+        
+        if (message.numMedia && parseInt(message.numMedia) > 0) {
+          const mediaList = await twilioClient.messages(messageSid).media.list()
+          
+          for (const media of mediaList) {
+            const mediaUrl = `https://api.twilio.com${media.uri.replace('.json', '')}`
+            const originalFilename = (media as any).filename || undefined
+            try {
+              const storedMedia = await mediaStorage.downloadAndStore(mediaUrl, twilioClient, originalFilename)
+              mediaUrls.push(storedMedia.url)
+              mediaTypes.push(storedMedia.contentType)
+            } catch (error) {
+              console.error('Failed to download document:', error)
+            }
+          }
+        }
+      } catch (error) {
+        console.error('Failed to fetch message from Twilio:', error)
+      }
+    } else if (numMedia > 0) {
+      for (let i = 0; i < numMedia; i++) {
+        const mediaUrl = params.get(`MediaUrl${i}`)
+        const mediaContentType = params.get(`MediaContentType${i}`)
+        
+        if (mediaUrl) {
+          try {
+            const storedMedia = await mediaStorage.downloadAndStore(mediaUrl, twilioClient)
+            mediaUrls.push(storedMedia.url)
+            mediaTypes.push(storedMedia.contentType)
+          } catch (error) {
+            console.error('Failed to download media:', error)
+            mediaUrls.push(mediaUrl)
+            mediaTypes.push(mediaContentType || 'application/octet-stream')
+          }
+        }
+      }
+    }
+    
     const inboundMessage = {
       from: phoneNumber,
       to: cleanTo,
-      content: params.get('Body'),
-      messageId: params.get('MessageSid') || params.get('SmsMessageSid'),
+      content: params.get('Body') || (mediaUrls.length > 0 || messageType === 'document' ? '[Document]' : ''),
+      messageId: messageSid || params.get('SmsMessageSid'),
       timestamp: new Date(),
-      profileName: profileName
+      profileName: profileName,
+      attachments: mediaUrls
     }
 
-    if (!inboundMessage.from || !inboundMessage.content) {
+    if (!inboundMessage.from) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
     }
 
@@ -51,6 +107,8 @@ export async function POST(request: NextRequest) {
       teamId
     })
 
+    broadcastTypingIndicator(contact.id, true)
+
     const message = await MessageService.create({
       content: inboundMessage.content!,
       channel: 'WHATSAPP',
@@ -62,40 +120,31 @@ export async function POST(request: NextRequest) {
         to: inboundMessage.to,
         timestamp: inboundMessage.timestamp,
         profileName: inboundMessage.profileName,
-        waId: waId
+        waId: waId,
+        mediaTypes: mediaTypes
       },
       contactId: contact.id,
       userId,
       teamId
     })
 
-    broadcastToSSE({
-      type: 'contactUpdated',
-      data: {
-        ...contact,
-        lastMessage: {
-          content: message.content,
-          timestamp: message.createdAt,
-          channel: 'whatsapp',
-          direction: 'inbound',
-          status: 'delivered'
-        }
-      }
-    })
-    
-    broadcastToSSE({
-      type: 'messageReceived',
-      data: {
-        ...message,
-        contactId: contact.id,
-        createdAt: message.createdAt,
-        channel: message.channel,
-        direction: message.direction,
-        status: message.status
-      }
+    if (mediaUrls.length > 0) {
+      await MessageService.update(message.id, {
+        attachments: mediaUrls
+      })
+    }
+
+    broadcastTypingIndicator(contact.id, false)
+
+    broadcastMessageReceived({
+      id: message.id,
+      contactId: contact.id,
+      channel: 'WHATSAPP',
+      direction: 'INBOUND',
+      content: message.content,
+      createdAt: message.createdAt
     })
 
-    // Record metrics for inbound WhatsApp message
     recordMessageMetrics({
       messageId: message.id,
       channel: 'WHATSAPP',
