@@ -59,7 +59,7 @@ export function useContactInbox(selectedChannel: 'sms' | 'whatsapp' | 'email' | 
     try {
       await messagingRepo.sendMessage({
         content: contentToSend,
-        channel: selectedContact.lastMessage?.channel as any || 'sms',
+        channel: (selectedContact.lastMessage?.channel?.toLowerCase() as any) || 'sms',
         to: selectedContact.phone || selectedContact.email || '',
         metadata: {
           contactId: selectedContact.id,

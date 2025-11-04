@@ -59,7 +59,7 @@ async function processEmailEvent(event: any) {
       event.body ||
       stripHtml(eventData.html || event.html) || 
       stripHtml(eventData.body_html || event.body_html) ||
-      `Email: ${subject}`
+      subject
     
     const message = await MessageService.create({
       content,

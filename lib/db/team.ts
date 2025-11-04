@@ -6,8 +6,6 @@ export class TeamService {
     const systemUserId = 'system-user-id'
     
     try {
-      await prisma.$connect()
-      
       const team = await prisma.team.upsert({
         where: { id: defaultTeamId },
         update: {},

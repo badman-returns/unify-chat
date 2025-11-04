@@ -11,7 +11,6 @@ import { MessageContent } from './MessageContent'
 import { ContactProfileModal } from './ContactProfileModal'
 import { SuccessDialog } from '../ui/SuccessDialog'
 import { TypingIndicator } from './TypingIndicator'
-import { RichTextEditor } from './RichTextEditor'
 import { AttachmentUpload } from './AttachmentUpload'
 import { useOptimisticMessage } from '@/hooks/useOptimisticMessage'
 import { useQueryClient } from '@tanstack/react-query'
@@ -146,6 +145,22 @@ export function ContactInbox({ selectedChannel }: ContactInboxProps) {
     }
   }
 
+  const getDisplayName = (contact: any) => {
+    if (!contact) return ''
+    if (contact.email && !contact.phone) {
+      return contact.email
+    }
+    return contact.name || contact.phone || contact.email || 'Unknown'
+  }
+
+  const getContactSubtitle = (contact: any) => {
+    if (!contact) return ''
+    if (contact.email && !contact.phone) {
+      return contact.lastMessage?.channel?.toUpperCase() || 'EMAIL'
+    }
+    return contact.phone || contact.email || ''
+  }
+
   const getChannelColor = (channel: string) => {
     switch (channel) {
       case 'sms': return 'bg-blue-100 text-blue-800 border-blue-200'
@@ -219,10 +234,10 @@ export function ContactInbox({ selectedChannel }: ContactInboxProps) {
                       </div>
                       <div className="flex-1 min-w-0">
                         <p className="text-sm font-medium text-foreground truncate">
-                          {contact.name}
+                          {getDisplayName(contact)}
                         </p>
                         <p className="text-xs text-muted-foreground truncate">
-                          {contact.phone || contact.email}
+                          {getContactSubtitle(contact)}
                         </p>
                       </div>
                     </div>
@@ -271,10 +286,10 @@ export function ContactInbox({ selectedChannel }: ContactInboxProps) {
                   </div>
                   <div>
                     <h3 className="text-base font-medium text-foreground">
-                      {selectedContact.name}
+                      {getDisplayName(selectedContact)}
                     </h3>
                     <p className="text-sm text-muted-foreground">
-                      {selectedContact.phone || selectedContact.email}
+                      {getContactSubtitle(selectedContact)}
                     </p>
                   </div>
                 </div>
@@ -417,33 +432,24 @@ export function ContactInbox({ selectedChannel }: ContactInboxProps) {
                     <Paperclip className="h-5 w-5 text-muted-foreground" />
                   </button>
 
-                  {selectedContact?.lastMessage?.channel?.toLowerCase() === 'email' ? (
-                    <RichTextEditor
-                      content={messageText}
-                      onChange={setMessageText}
-                      placeholder="Type a message..."
-                      simple={true}
-                    />
-                  ) : (
-                    <textarea
-                      value={messageText}
-                      onChange={(e) => setMessageText(e.target.value)}
-                      onFocus={() => {
-                        if (selectedContactId) {
-                          markAsRead(selectedContactId)
-                        }
-                      }}
-                      placeholder="Type a message..."
-                      rows={2}
-                      className="flex-1 px-3 py-2 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent resize-none"
-                      onKeyPress={(e) => {
-                        if (e.key === 'Enter' && !e.shiftKey) {
-                          e.preventDefault()
-                          handleSendMessage()
-                        }
-                      }}
-                    />
-                  )}
+                  <textarea
+                    value={messageText}
+                    onChange={(e) => setMessageText(e.target.value)}
+                    onFocus={() => {
+                      if (selectedContactId) {
+                        markAsRead(selectedContactId)
+                      }
+                    }}
+                    placeholder="Type a message..."
+                    rows={2}
+                    className="flex-1 px-3 py-2 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent resize-none"
+                    onKeyPress={(e) => {
+                      if (e.key === 'Enter' && !e.shiftKey) {
+                        e.preventDefault()
+                        handleSendMessage()
+                      }
+                    }}
+                  />
 
                   <button
                     onClick={() => setIsScheduleModalOpen(true)}
@@ -488,7 +494,7 @@ export function ContactInbox({ selectedChannel }: ContactInboxProps) {
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
                       contactId: selectedContact.id,
-                      channel: selectedContact.lastMessage?.channel || 'sms',
+                      channel: selectedContact.lastMessage?.channel?.toLowerCase() || 'sms',
                       content: messageText,
                       to: selectedContact.phone || selectedContact.email,
                       scheduledAt: scheduledAt.toISOString()
