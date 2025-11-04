@@ -2,6 +2,12 @@
 
 A modern, real-time customer communication platform that unifies SMS, WhatsApp, and Email messaging into a single, powerful inbox. Built for teams that need to manage customer conversations efficiently across multiple channels.
 
+## 🎥 Demo Video
+
+[![UnifyChat Demo](https://cdn.loom.com/sessions/thumbnails/cbb600a4fa5f43658038fd867630c602-with-play.gif)](https://www.loom.com/share/cbb600a4fa5f43658038fd867630c602)
+
+**[Watch the 5-minute walkthrough →](https://www.loom.com/share/cbb600a4fa5f43658038fd867630c602)**
+
 ## 📊 Live Stats
 View current metrics at: `GET /api/stats`
 - **Total Messages**: Real-time message count across all channels
