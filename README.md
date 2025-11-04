@@ -1,8 +1,13 @@
-# UnifyChat - Multi-Channel Customer Outreach Platform
+# UnifyChat - Unified Multi-Channel Customer Communication Platform
 
-A unified inbox that brings together SMS, WhatsApp, and Email into one interface. Built for the Attack Capital assignment.
+A modern, real-time customer communication platform that unifies SMS, WhatsApp, and Email messaging into a single, powerful inbox. Built for teams that need to manage customer conversations efficiently across multiple channels.
 
-**Tech Stack**: Next.js 14, TypeScript, Prisma, PostgreSQL, Better Auth, Twilio, Resend
+## 📊 Live Stats
+View current metrics at: `GET /api/stats`
+- **Total Messages**: Real-time message count across all channels
+- **Total Contacts**: Active contacts in the system
+- **Scheduled Messages**: Messages queued for future delivery
+- **Channel Breakdown**: SMS, WhatsApp, Email message distribution
 
 ## What This Project Does
 
@@ -38,6 +43,24 @@ The project emphasizes:
 - ❌ **Trial Number UI**: Trial number configured in env, but no UI to buy/manage numbers
 - ❌ **Email Body Content**: Resend webhooks only provide metadata (from, subject), not full body
 - ❌ **Private Notes UI**: Backend encryption exists, but no UI toggle to mark notes as private
+
+## 📊 Project Metrics
+
+Access live metrics via API: `GET /api/stats`
+
+Returns:
+```json
+{
+  "totalMessages": 150,
+  "totalContacts": 25,
+  "scheduledMessages": 3,
+  "channels": {
+    "SMS": 80,
+    "WHATSAPP": 45,
+    "EMAIL": 25
+  }
+}
+```
 
 ### Architecture Decisions Made
 - **WebSockets instead of SSE**: Needed bidirectional communication for collaborative editing
