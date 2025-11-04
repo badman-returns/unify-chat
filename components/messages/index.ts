@@ -1,4 +1,3 @@
-export { ComposeMessageModal } from './ComposeMessageModal'
 export { ContactInbox } from './ContactInbox'
 export { MessageComposer } from './MessageComposer'
 export { ChannelSelector } from './ChannelSelector'

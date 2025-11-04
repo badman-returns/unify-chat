@@ -1,10 +1,9 @@
 "use client"
 
 import { useState } from 'react'
-import { MessageSquare, LogOut, PlusCircle, BarChart3, Settings } from 'lucide-react'
+import { MessageSquare, LogOut, BarChart3, Settings } from 'lucide-react'
 import { ContactInbox } from '@/components/messages/ContactInbox'
 import { ProtectedRoute } from '@/components/auth/ProtectedRoute'
-import { ComposeMessageModal } from '@/components/messages/ComposeMessageModal'
 import { TrialBanner } from '@/components/messages/TrialBanner'
 import { cn } from '@/lib/utils'
 import { typography, interactive } from '@/lib/design-tokens'
@@ -15,7 +14,6 @@ import { useTrialMode } from '@/hooks/useTrialMode'
 export default function MessagesPage() {
   const router = useRouter()
   const [selectedChannel] = useState<'sms' | 'whatsapp' | 'email' | 'all'>('all')
-  const [isComposeOpen, setIsComposeOpen] = useState(false)
   const { isTrial, verifiedCount, totalContacts } = useTrialMode()
 
   const handleLogout = async () => {
@@ -64,17 +62,6 @@ export default function MessagesPage() {
                   <Settings className="h-4 w-4" />
                   <span>Setup</span>
                 </button>
-
-                <button
-                  onClick={() => setIsComposeOpen(true)}
-                  className={cn(
-                    interactive.button.primary,
-                    "text-sm flex items-center space-x-2"
-                  )}
-                >
-                  <PlusCircle className="h-4 w-4" />
-                  <span>New Message</span>
-                </button>
                 
                 <button
                   onClick={() => router.push('/analytics')}
@@ -105,11 +92,6 @@ export default function MessagesPage() {
         <div className="flex-1 overflow-hidden">
           <ContactInbox selectedChannel={selectedChannel} />
         </div>
-
-        <ComposeMessageModal 
-          isOpen={isComposeOpen}
-          onClose={() => setIsComposeOpen(false)}
-        />
       </div>
     </ProtectedRoute>
   )
