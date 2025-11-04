@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { messageScheduler } from '@/lib/scheduler'
 
+messageScheduler.start()
+
 export async function POST(request: NextRequest) {
   try {
     const data = await request.json()
@@ -27,8 +29,8 @@ export async function POST(request: NextRequest) {
       channel: channel.toUpperCase(),
       to,
       contactId,
-      userId: 'system-user-id', // TODO: Get from auth
-      teamId: 'default-team-id', // TODO: Get from auth
+      userId: 'system-user-id',
+      teamId: 'default-team-id',
       scheduledAt: scheduledDate,
       metadata
     })
