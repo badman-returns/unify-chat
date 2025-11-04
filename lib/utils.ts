@@ -16,7 +16,6 @@ export function safeParseDate(dateValue: any): Date {
     let parsedDate: Date
     
     if (typeof dateValue === 'string') {
-      // Handle ISO strings and regular date strings
       parsedDate = dateValue.includes('T') ? parseISO(dateValue) : new Date(dateValue)
     } else {
       parsedDate = new Date(dateValue)

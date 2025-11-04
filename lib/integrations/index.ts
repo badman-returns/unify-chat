@@ -54,7 +54,7 @@ export class IntegrationFactory {
             enabled: true,
             credentials: {
               apiKey: process.env.RESEND_API_KEY!,
-              fromEmail: 'noreply@unifychat.com'
+              fromEmail: process.env.RESEND_FROM_EMAIL || 'noreply@unifychat.com'
             },
             settings: {}
           })
@@ -309,10 +309,10 @@ export const createIntegrationManager = () => {
       settings: {}
     },
     email: {
-      enabled: !!process.env.SENDGRID_API_KEY,
+      enabled: !!process.env.RESEND_API_KEY,
       credentials: {
-        apiKey: process.env.SENDGRID_API_KEY || '',
-        fromEmail: process.env.SENDGRID_FROM_EMAIL || ''
+        apiKey: process.env.RESEND_API_KEY || '',
+        fromEmail: process.env.RESEND_FROM_EMAIL || ''
       },
       settings: {}
     }

@@ -15,7 +15,6 @@ export async function PATCH(
       )
     }
 
-    // Mark all messages from this contact as read
     await MessageService.markContactMessagesAsRead(contactId)
 
     return NextResponse.json({

@@ -18,9 +18,20 @@ export async function GET(
       )
     }
 
-    const messages = await MessageService.getByContactId(params.contactId)
+    const { searchParams } = new URL(request.url)
+    const limit = parseInt(searchParams.get('limit') || '50')
+    const cursor = searchParams.get('cursor')
 
-    const formattedMessages = messages.map(message => {
+    const messages = await MessageService.getByContactId(params.contactId, {
+      limit: limit + 1,
+      cursor
+    })
+
+    const hasMore = messages.length > limit
+    const messagesToReturn = hasMore ? messages.slice(0, limit) : messages
+    const nextCursor = hasMore ? messagesToReturn[messagesToReturn.length - 1].id : null
+
+    const formattedMessages = messagesToReturn.map(message => {
       const metadata = message.metadata as any || {}
       return {
         id: message.id,
@@ -32,14 +43,27 @@ export async function GET(
         content: message.content,
         status: message.status.toLowerCase(),
         timestamp: message.createdAt,
+        scheduledAt: message.scheduledAt,
+        attachments: message.attachments,
         metadata: message.metadata
       }
     })
 
-    return NextResponse.json({
-      success: true,
-      messages: formattedMessages
-    })
+    return NextResponse.json(
+      {
+        success: true,
+        messages: formattedMessages,
+        nextCursor,
+        hasMore
+      },
+      {
+        headers: {
+          'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
+          'Pragma': 'no-cache',
+          'Expires': '0',
+        }
+      }
+    )
 
   } catch (error: any) {
     console.error('Error fetching messages:', error)
