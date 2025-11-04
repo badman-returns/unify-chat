@@ -1,9 +1,9 @@
 "use client"
 
-import { useState } from 'react'
 import { Send, Loader2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { interactive, typography } from '@/lib/design-tokens'
+import { useMessageComposer } from '@/hooks/useMessageComposer'
 
 interface MessageComposerProps {
   selectedChannel: 'sms' | 'whatsapp' | 'email' | 'all'
@@ -16,75 +16,22 @@ export function MessageComposer({
   getChannelIcon, 
   getChannelColor 
 }: MessageComposerProps) {
-  const [recipient, setRecipient] = useState('')
-  const [message, setMessage] = useState('')
-  const [subject, setSubject] = useState('')
-  const [isLoading, setIsLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-  const [success, setSuccess] = useState<string | null>(null)
-
-  const handleSend = async () => {
-    if (!recipient || !message) {
-      setError('Please fill in recipient and message')
-      return
-    }
-
-    if (selectedChannel === 'all') {
-      setError('Please select a specific channel to send messages')
-      return
-    }
-
-    setIsLoading(true)
-    setError(null)
-    setSuccess(null)
-
-    try {
-      const payload: any = {
-        channel: selectedChannel,
-        to: recipient,
-        content: message
-      }
-
-      // Add subject for email
-      if (selectedChannel === 'email' && subject) {
-        payload.metadata = { subject }
-      }
-
-      const response = await fetch('/api/messages/send', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(payload)
-      })
-
-      const result = await response.json()
-
-      if (response.ok) {
-        setSuccess(`Message sent successfully via ${selectedChannel}!`)
-        setMessage('')
-        setRecipient('')
-        setSubject('')
-      } else {
-        setError(result.error || 'Failed to send message')
-      }
-    } catch (error) {
-      setError('Network error. Please try again.')
-    } finally {
-      setIsLoading(false)
-    }
-  }
-
-  const getPlaceholderText = () => {
-    switch (selectedChannel) {
-      case 'sms': return 'Enter phone number (e.g., +1234567890)'
-      case 'whatsapp': return 'Enter WhatsApp number (e.g., +1234567890)'
-      case 'email': return 'Enter email address'
-      default: return 'Select a channel first'
-    }
-  }
-
-  const isDisabled = selectedChannel === 'all' || isLoading
+  const {
+    recipient,
+    setRecipient,
+    message,
+    setMessage,
+    subject,
+    setSubject,
+    isLoading,
+    error,
+    success,
+    isDisabled,
+    canSend,
+    handleSend,
+    getPlaceholderText,
+    getCharacterLimit
+  } = useMessageComposer(selectedChannel)
 
   return (
     <div className="bg-card border border-border rounded-lg p-6">
@@ -115,7 +62,6 @@ export function MessageComposer({
       )}
 
       <div className="space-y-4">
-        {/* Recipient */}
         <div>
           <label className={cn(typography.label, "block mb-2")}>
             Recipient
@@ -133,7 +79,6 @@ export function MessageComposer({
           />
         </div>
 
-        {/* Subject (Email only) */}
         {selectedChannel === 'email' && (
           <div>
             <label className={cn(typography.label, "block mb-2")}>
@@ -153,7 +98,6 @@ export function MessageComposer({
           </div>
         )}
 
-        {/* Message */}
         <div>
           <label className={cn(typography.label, "block mb-2")}>
             Message
@@ -171,21 +115,18 @@ export function MessageComposer({
             )}
           />
           <div className="mt-1 text-xs text-muted-foreground">
-            {selectedChannel === 'sms' && 'SMS: 160 characters per segment'}
-            {selectedChannel === 'whatsapp' && 'WhatsApp: Up to 4096 characters'}
-            {selectedChannel === 'email' && 'Email: No character limit'}
+            {getCharacterLimit()}
           </div>
         </div>
 
-        {/* Send Button */}
         <div className="flex justify-end">
           <button
             onClick={handleSend}
-            disabled={isDisabled || !recipient || !message}
+            disabled={!canSend}
             className={cn(
               interactive.button.primary,
               "flex items-center space-x-2",
-              (isDisabled || !recipient || !message) && "opacity-50 cursor-not-allowed"
+              !canSend && "opacity-50 cursor-not-allowed"
             )}
           >
             {isLoading ? (

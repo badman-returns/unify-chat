@@ -1,6 +1,6 @@
 "use client"
 
-import { Phone, Mail, MessageCircle, CheckCircle, AlertCircle, Check } from 'lucide-react'
+import { Phone, Mail, MessageCircle, AlertCircle, Check } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { typography } from '@/lib/design-tokens'
 import { useChannelSelector } from '@/hooks/useChannelSelector'
@@ -14,7 +14,6 @@ export function ChannelSelector({ selectedChannel, onChannelSelect }: ChannelSel
   const {
     channelOptions,
     loading,
-    getChannelIcon,
     getChannelColor,
     handleChannelSelect
   } = useChannelSelector(selectedChannel, onChannelSelect)

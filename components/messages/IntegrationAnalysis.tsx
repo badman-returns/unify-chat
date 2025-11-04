@@ -1,61 +1,14 @@
 "use client"
 
-import { useState, useEffect } from 'react'
-import { BarChart3, TrendingUp, DollarSign, Zap, Shield, Clock } from 'lucide-react'
-import { useChannels } from '@/hooks/useChannels'
+import { BarChart3, TrendingUp, DollarSign, Zap, Shield, Clock, Download, FileText } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { typography } from '@/lib/design-tokens'
-
-interface AnalysisData {
-  summary: {
-    totalChannels: number
-    totalMessages: number
-    averageSuccessRate: number
-  }
-  channels: Array<{
-    channel: string
-    name: string
-    description: string
-    enabled: boolean
-    pricing: {
-      cost: string
-      unit: string
-    }
-    reliability: number
-    latency: string
-    metrics?: {
-      totalMessages: number
-      successRate: number
-    }
-  }>
-  recommendations: Array<{
-    type: string
-    title: string
-    description: string
-  }>
-}
+import { useIntegrationAnalysis } from '@/hooks/useIntegrationAnalysis'
+import { MessageVolumeChart } from '../analytics/MessageVolumeChart'
+import { ChannelComparisonChart } from '../analytics/ChannelComparisonChart'
 
 export function IntegrationAnalysis() {
-  const [analysis, setAnalysis] = useState<AnalysisData | null>(null)
-  const [loading, setLoading] = useState(true)
-
-  useEffect(() => {
-    fetchAnalysis()
-  }, [])
-
-  const fetchAnalysis = async () => {
-    try {
-      const response = await fetch('/api/integrations/analysis')
-      if (response.ok) {
-        const data = await response.json()
-        setAnalysis(data)
-      }
-    } catch (error) {
-      console.error('Error fetching analysis:', error)
-    } finally {
-      setLoading(false)
-    }
-  }
+  const { analysis, loading, exportToCSV, exportToText } = useIntegrationAnalysis()
 
   if (loading) {
     return (
@@ -102,22 +55,40 @@ export function IntegrationAnalysis() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div>
-        <h2 className={cn(typography.h2, "mb-2")}>Integration Analysis</h2>
-        <p className="text-muted-foreground">
-          Comprehensive analysis of your multi-channel messaging setup
-        </p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className={cn(typography.h2, "mb-2")}>Integration Analysis</h2>
+          <p className="text-muted-foreground">
+            Comprehensive analysis of your multi-channel messaging setup
+          </p>
+        </div>
+        <div className="flex space-x-2">
+          <button
+            onClick={exportToCSV}
+            className="flex items-center space-x-2 px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors"
+            title="Export as CSV"
+          >
+            <Download className="h-4 w-4" />
+            <span>Export CSV</span>
+          </button>
+          <button
+            onClick={exportToText}
+            className="flex items-center space-x-2 px-4 py-2 border border-border bg-card rounded-lg hover:bg-muted transition-colors"
+            title="Export as Text Report"
+          >
+            <FileText className="h-4 w-4" />
+            <span>Report</span>
+          </button>
+        </div>
       </div>
 
-      {/* Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <div className="bg-card border border-border rounded-lg p-4">
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm text-muted-foreground">Total Channels</p>
               <p className={cn(typography.h2, "text-primary")}>
-                {analysis.summary.totalChannels}
+                {analysis?.summary?.totalChannels || 0}
               </p>
             </div>
             <BarChart3 className="h-8 w-8 text-muted-foreground" />
@@ -129,7 +100,7 @@ export function IntegrationAnalysis() {
             <div>
               <p className="text-sm text-muted-foreground">Total Messages</p>
               <p className={cn(typography.h2, "text-primary")}>
-                {analysis.summary.totalMessages.toLocaleString()}
+                {(analysis?.summary?.totalMessages || 0).toLocaleString()}
               </p>
             </div>
             <TrendingUp className="h-8 w-8 text-muted-foreground" />
@@ -141,15 +112,38 @@ export function IntegrationAnalysis() {
             <div>
               <p className="text-sm text-muted-foreground">Success Rate</p>
               <p className={cn(typography.h2, "text-primary")}>
-                {analysis.summary.averageSuccessRate.toFixed(1)}%
+                {(analysis?.summary?.averageSuccessRate || 0).toFixed(1)}%
               </p>
             </div>
             <Shield className="h-8 w-8 text-muted-foreground" />
           </div>
         </div>
+
+        <div className="bg-card border border-border rounded-lg p-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm text-muted-foreground">Avg Response Time</p>
+              <p className={cn(typography.h2, "text-primary")}>
+                {analysis?.summary?.averageResponseTime ? `${analysis.summary.averageResponseTime}s` : 'N/A'}
+              </p>
+            </div>
+            <Clock className="h-8 w-8 text-muted-foreground" />
+          </div>
+        </div>
       </div>
 
-      {/* Channel Comparison Table */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="bg-card border border-border rounded-lg p-6">
+          <h3 className={cn(typography.h3, "mb-4")}>Message Volume Over Time</h3>
+          <MessageVolumeChart data={analysis.timeSeries || []} />
+        </div>
+
+        <div className="bg-card border border-border rounded-lg p-6">
+          <h3 className={cn(typography.h3, "mb-4")}>Channel Performance</h3>
+          <ChannelComparisonChart data={analysis.channelComparison || []} />
+        </div>
+      </div>
+
       <div className="bg-card border border-border rounded-lg overflow-hidden">
         <div className="p-4 border-b border-border">
           <h3 className={cn(typography.h3)}>Channel Comparison</h3>
@@ -171,7 +165,7 @@ export function IntegrationAnalysis() {
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
-              {analysis.channels.map((channel) => (
+              {(analysis?.channels || []).map((channel) => (
                 <tr key={channel.channel} className="hover:bg-muted/25">
                   <td className="p-4">
                     <div className="flex items-center space-x-3">
@@ -229,11 +223,10 @@ export function IntegrationAnalysis() {
         </div>
       </div>
 
-      {/* Recommendations */}
       <div className="bg-card border border-border rounded-lg p-6">
         <h3 className={cn(typography.h3, "mb-4")}>Recommendations</h3>
         <div className="space-y-4">
-          {analysis.recommendations.map((rec, index) => (
+          {(analysis?.recommendations || []).map((rec, index) => (
             <div key={index} className="flex items-start space-x-3 p-3 bg-muted/25 rounded-lg">
               {getRecommendationIcon(rec.type)}
               <div>
