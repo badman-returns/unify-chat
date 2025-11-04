@@ -1,8 +1,9 @@
 "use client"
 
-import { useState } from 'react'
 import { X, User, Phone, Mail, MessageCircle, Calendar, Tag, FileText, Send } from 'lucide-react'
 import { cn, formatMessageTime } from '@/lib/utils'
+import { CollaborationPanel, PresenceIndicator } from '@/components/collab'
+import { useContactProfile } from '@/hooks/useContactProfile'
 
 interface Message {
   id: string
@@ -39,7 +40,16 @@ export function ContactProfileModal({
   messages,
   onSendMessage
 }: ContactProfileModalProps) {
-  const [activeTab, setActiveTab] = useState<'timeline' | 'notes'>('timeline')
+  const {
+    activeTab,
+    setActiveTab,
+    notes,
+    handleNoteUpdate,
+    isLoadingNotes,
+    localMessages,
+    presences,
+    teamMembers
+  } = useContactProfile(contact, messages, isOpen)
 
   if (!isOpen || !contact) return null
 
@@ -72,7 +82,6 @@ export function ContactProfileModal({
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
       <div className="bg-card border border-border rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] flex flex-col">
-        {/* Header */}
         <div className="flex items-center justify-between p-6 border-b border-border">
           <div className="flex items-center space-x-4">
             <div className="w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center">
@@ -83,6 +92,11 @@ export function ContactProfileModal({
               <p className="text-sm text-muted-foreground">
                 {contact.phone || contact.email}
               </p>
+              {presences.length > 0 && (
+                <div className="mt-1">
+                  <PresenceIndicator presences={presences} maxDisplay={3} />
+                </div>
+              )}
             </div>
           </div>
           <button
@@ -93,7 +107,6 @@ export function ContactProfileModal({
           </button>
         </div>
 
-        {/* Contact Details */}
         <div className="p-6 border-b border-border space-y-3">
           <div className="grid grid-cols-2 gap-4">
             {contact.phone && (
@@ -117,12 +130,11 @@ export function ContactProfileModal({
             <div className="flex items-center space-x-2">
               <MessageCircle className="h-4 w-4 text-muted-foreground" />
               <span className="text-sm text-foreground">
-                {messages.length} messages
+                {localMessages.length} messages
               </span>
             </div>
           </div>
 
-          {/* Tags */}
           {contact.tags && contact.tags.length > 0 && (
             <div className="flex items-center space-x-2 flex-wrap pt-2">
               <Tag className="h-4 w-4 text-muted-foreground" />
@@ -137,7 +149,6 @@ export function ContactProfileModal({
             </div>
           )}
 
-          {/* Quick Actions */}
           <div className="flex space-x-2 pt-2">
             <button
               onClick={onSendMessage}
@@ -149,7 +160,6 @@ export function ContactProfileModal({
           </div>
         </div>
 
-        {/* Tabs */}
         <div className="flex border-b border-border">
           <button
             onClick={() => setActiveTab('timeline')}
@@ -177,17 +187,16 @@ export function ContactProfileModal({
           </button>
         </div>
 
-        {/* Content */}
         <div className="flex-1 overflow-y-auto p-6">
           {activeTab === 'timeline' ? (
             <div className="space-y-4">
-              {messages.length === 0 ? (
+              {localMessages.length === 0 ? (
                 <div className="text-center py-8">
                   <MessageCircle className="h-12 w-12 text-muted-foreground mx-auto mb-2" />
                   <p className="text-sm text-muted-foreground">No messages yet</p>
                 </div>
               ) : (
-                messages
+                localMessages
                   .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
                   .map((message) => (
                     <div key={message.id} className="flex space-x-3">
@@ -226,15 +235,23 @@ export function ContactProfileModal({
             </div>
           ) : (
             <div className="space-y-4">
-              <div className="bg-muted/50 rounded-lg p-4">
-                <h4 className="text-sm font-medium text-foreground mb-2 flex items-center">
-                  <FileText className="h-4 w-4 mr-2" />
-                  Contact Notes
-                </h4>
-                <p className="text-sm text-muted-foreground">
-                  {contact.notes || 'No notes yet. Add notes to keep track of important information about this contact.'}
-                </p>
-              </div>
+              {isLoadingNotes ? (
+                <div className="flex items-center justify-center py-8">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+                </div>
+              ) : (
+                <CollaborationPanel
+                  contactId={contact.id}
+                  initialNote={notes}
+                  onNoteUpdate={handleNoteUpdate}
+                  teamMembers={teamMembers}
+                />
+              )}
+              {presences.length > 0 && (
+                <div className="text-xs text-muted-foreground">
+                  {presences.length} {presences.length === 1 ? 'person' : 'people'} viewing this contact
+                </div>
+              )}
             </div>
           )}
         </div>
