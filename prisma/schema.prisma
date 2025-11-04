@@ -32,6 +32,7 @@ enum MessageStatus {
   DELIVERED
   READ
   FAILED
+  SCHEDULED
 }
 
 model User {
@@ -150,20 +151,23 @@ model Message {
   content     String           @db.Text
   channel     Channel
   direction   MessageDirection
-  status      MessageStatus    @default(SENT)
-  metadata    Json?
+  status      MessageStatus    @default(PENDING)
   attachments String[]
+  metadata    Json?
   scheduledAt DateTime?
   createdAt   DateTime         @default(now())
   updatedAt   DateTime         @updatedAt
   contactId   String
+  contact     Contact          @relation(fields: [contactId], references: [id], onDelete: Cascade)
   userId      String
+  user        User             @relation(fields: [userId], references: [id])
   teamId      String
+  team        Team             @relation(fields: [teamId], references: [id], onDelete: Cascade)
 
-  contact Contact @relation(fields: [contactId], references: [id], onDelete: Cascade)
-  user    User    @relation(fields: [userId], references: [id])
-  team    Team    @relation(fields: [teamId], references: [id], onDelete: Cascade)
-
+  @@index([contactId])
+  @@index([userId])
+  @@index([teamId])
+  @@index([status])
   @@index([teamId, contactId, createdAt])
   @@index([teamId, channel, createdAt])
   @@index([scheduledAt])

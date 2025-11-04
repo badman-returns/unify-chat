@@ -7,6 +7,12 @@ import {
   ChannelConfig 
 } from './types'
 
+/**
+ * WhatsApp Business integration adapter using Twilio API
+ * Handles WhatsApp message sending with media support and webhook processing
+ * Requires Twilio WhatsApp sandbox or approved WhatsApp Business account
+ * @implements {IntegrationAdapter}
+ */
 export class WhatsAppAdapter implements IntegrationAdapter {
   channel = 'whatsapp' as const
   name = 'Twilio WhatsApp'
@@ -21,6 +27,12 @@ export class WhatsAppAdapter implements IntegrationAdapter {
     }
   }
 
+  /**
+   * Send a WhatsApp message via Twilio
+   * Automatically formats phone numbers with 'whatsapp:' prefix
+   * @param request - Message send request with content and recipient
+   * @returns Response with success status and Twilio message SID
+   */
   async sendMessage(request: SendMessageRequest): Promise<SendMessageResponse> {
     if (!this.client) {
       return {
@@ -35,11 +47,17 @@ export class WhatsAppAdapter implements IntegrationAdapter {
       )
       const toNumber = this.formatWhatsAppNumber(request.to)
 
-      const message = await this.client.messages.create({
+      const messageParams: any = {
         body: request.content,
         from: fromNumber,
         to: toNumber
-      })
+      }
+
+      if (request.mediaUrl) {
+        messageParams.mediaUrl = [request.mediaUrl]
+      }
+
+      const message = await this.client.messages.create(messageParams)
 
       return {
         success: true,
@@ -49,7 +67,8 @@ export class WhatsAppAdapter implements IntegrationAdapter {
           direction: message.direction,
           price: message.price,
           priceUnit: message.priceUnit,
-          channel: 'whatsapp'
+          channel: 'whatsapp',
+          mediaUrl: request.mediaUrl
         }
       }
     } catch (error: any) {
@@ -61,6 +80,12 @@ export class WhatsAppAdapter implements IntegrationAdapter {
     }
   }
 
+  /**
+   * Process incoming WhatsApp webhook from Twilio
+   * Handles inbound messages, status updates, and media attachments
+   * @param payload - Twilio webhook payload
+   * @returns Normalized message object or null if invalid
+   */
   async handleWebhook(payload: any): Promise<BaseMessage | null> {
     try {
       const {
@@ -112,6 +137,11 @@ export class WhatsAppAdapter implements IntegrationAdapter {
     }
   }
 
+  /**
+   * Validate WhatsApp configuration
+   * @param config - Channel configuration object
+   * @returns True if all required credentials are present
+   */
   validateConfig(config: ChannelConfig): boolean {
     return !!(
       config.enabled &&
@@ -121,6 +151,10 @@ export class WhatsAppAdapter implements IntegrationAdapter {
     )
   }
 
+  /**
+   * Get WhatsApp channel information and capabilities
+   * @returns Channel metadata including pricing and features
+   */
   getChannelInfo() {
     return {
       name: 'WhatsApp',
@@ -142,6 +176,11 @@ export class WhatsAppAdapter implements IntegrationAdapter {
     }
   }
 
+  /**
+   * Format phone number for WhatsApp by adding 'whatsapp:' prefix
+   * @param phoneNumber - Phone number in E.164 format
+   * @returns Formatted number with whatsapp: prefix
+   */
   private formatWhatsAppNumber(phoneNumber: string): string {
     const cleanNumber = phoneNumber.replace(/^whatsapp:/, '')
     
@@ -150,10 +189,20 @@ export class WhatsAppAdapter implements IntegrationAdapter {
       : `whatsapp:${cleanNumber}`
   }
 
+  /**
+   * Remove 'whatsapp:' prefix from phone number
+   * @param phoneNumber - Phone number with optional whatsapp: prefix
+   * @returns Clean phone number without prefix
+   */
   private cleanWhatsAppNumber(phoneNumber: string): string {
     return phoneNumber.replace(/^whatsapp:/, '')
   }
 
+  /**
+   * Map Twilio status to standardized message status
+   * @param twilioStatus - Twilio message status (queued, sent, delivered, etc.)
+   * @returns Normalized status (pending, sent, delivered, read, failed)
+   */
   private mapTwilioStatus(twilioStatus: string): BaseMessage['status'] {
     switch (twilioStatus?.toLowerCase()) {
       case 'queued':

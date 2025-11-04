@@ -19,6 +19,7 @@ export interface SendMessageRequest {
   to: string
   content: string
   from?: string
+  mediaUrl?: string
   metadata?: Record<string, any>
 }
 
