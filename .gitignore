@@ -50,8 +50,12 @@ prisma/migrations/
 *.tmp
 *.temp
 
+# Uploads
+public/uploads/media/*
+!public/uploads/media/.gitkeep
+
 # Documentation (will create custom versions later)
-# README.md
+README.md
 TWILIO_SETUP.md
 PROGRESS.md
-# requirement.txt
+requirement.txt

@@ -2,6 +2,8 @@
 @tailwind components;
 @tailwind utilities;
 
+@import 'tippy.js/dist/tippy.css';
+
 @layer base {
   :root {
     /* OpenPhone-inspired color system */
@@ -113,4 +115,24 @@
 
 .typing-dot {
   @apply w-2 h-2 bg-muted-foreground rounded-full animate-pulse;
+}
+
+.mention {
+  @apply inline-block px-1.5 py-0.5 mx-0.5 bg-primary/10 text-primary rounded font-medium text-sm;
+}
+
+.mention-suggestions {
+  @apply fixed z-50;
+}
+
+.ProseMirror {
+  outline: none;
+}
+
+.ProseMirror p.is-editor-empty:first-child::before {
+  content: attr(data-placeholder);
+  float: left;
+  color: hsl(var(--muted-foreground));
+  pointer-events: none;
+  height: 0;
 }
