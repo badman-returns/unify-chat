@@ -24,7 +24,7 @@ The project emphasizes:
 - **Message Scheduling**: Postgres-based queue, runs every minute
 - **Analytics Dashboard**: Charts showing volume, latency, reliability per channel
 - **Team Collaboration**: @mentions, presence indicators, typing status
-- **Notes System**: Public/private notes with AES-256 encryption for private ones
+- ✅ **Notes System**: Collaborative notes with real-time editing, @mentions, and encryption support
 - **Role-Based Access**: Viewer/Editor/Admin/Owner roles
 - **Media Attachments**: Images/files via Cloudinary
 - **Optimistic UI**: React Query for instant feedback
@@ -35,8 +35,9 @@ The project emphasizes:
 - **HubSpot Integration**: Not implemented (was optional)
 - **Slack/Zapier Webhooks**: Not implemented (was optional)
 - **Twilio VoIP Calls**: Not implemented (was optional)
-- **Trial Number UI**: Trial number configured in env, but no UI to buy/manage numbers
-- **Email Body Content**: Resend webhooks only provide metadata (from, subject), not full body
+- ❌ **Trial Number UI**: Trial number configured in env, but no UI to buy/manage numbers
+- ❌ **Email Body Content**: Resend webhooks only provide metadata (from, subject), not full body
+- ❌ **Private Notes UI**: Backend encryption exists, but no UI toggle to mark notes as private
 
 ### Architecture Decisions Made
 - **WebSockets instead of SSE**: Needed bidirectional communication for collaborative editing
@@ -239,7 +240,7 @@ The schema is pretty straightforward. Users belong to Teams (automatically assig
 
 **Auth**: Better Auth handles email/password and Google OAuth. Four role levels: Viewer, Editor, Admin, Owner.
 
-**Notes**: Public notes visible to team, private notes encrypted with AES-256-GCM via Prisma middleware.
+**Notes**: Collaborative notes with @mentions and real-time editing. Backend supports private note encryption (AES-256-GCM via Prisma middleware) but UI toggle not yet implemented - all notes currently public.
 
 **Real-time**: Custom WebSocket server handles live updates - new messages, typing indicators, presence, cursor positions.
 
