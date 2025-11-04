@@ -40,7 +40,7 @@ export function PasswordInput({
         value={value}
         onChange={onChange}
         className={cn(
-          "pr-10", // Add padding for the icon
+          "pr-10",
           className
         )}
         placeholder={placeholder}

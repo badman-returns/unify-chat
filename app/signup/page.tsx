@@ -1,8 +1,11 @@
 "use client"
 
+import { useEffect } from 'react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { MessageSquare } from 'lucide-react'
 import { useSignup } from '@/hooks/useSignup'
+import { useSession } from '@/lib/auth-client'
 import { GoogleIcon } from '@/components/icons/GoogleIcon'
 import { ErrorAlert } from '@/components/ui/ErrorAlert'
 import { PasswordInput } from '@/components/ui/PasswordInput'
@@ -10,6 +13,8 @@ import { cn } from '@/lib/utils'
 import { interactive, typography } from '@/lib/design-tokens'
 
 export default function SignupPage() {
+  const router = useRouter()
+  const { data: session, isPending } = useSession()
   const {
     isLoading,
     error,
@@ -19,6 +24,24 @@ export default function SignupPage() {
     handleEmailSignup,
     handleGoogleSignup
   } = useSignup()
+
+  useEffect(() => {
+    if (!isPending && session) {
+      router.push('/messages')
+    }
+  }, [session, isPending, router])
+
+  if (isPending) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+      </div>
+    )
+  }
+
+  if (session) {
+    return null
+  }
 
   return (
     <div className="min-h-screen bg-background flex flex-col justify-center">

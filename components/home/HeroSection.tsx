@@ -1,7 +1,6 @@
 import Link from 'next/link'
-import { ArrowRight, Play } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { layout, interactive, typography } from '@/lib/design-tokens'
+import { layout, interactive } from '@/lib/design-tokens'
 
 export function HeroSection() {
   return (
