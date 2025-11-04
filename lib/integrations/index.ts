@@ -13,60 +13,6 @@ import {
 
 export * from './types'
 
-export class IntegrationFactory {
-  private static smsAdapter: SMSAdapter | null = null
-  private static whatsappAdapter: WhatsAppAdapter | null = null
-  private static emailAdapter: EmailAdapter | null = null
-
-  static getIntegration(channel: 'SMS' | 'WHATSAPP' | 'EMAIL') {
-    switch (channel) {
-      case 'SMS':
-        if (!this.smsAdapter) {
-          this.smsAdapter = new SMSAdapter({
-            enabled: true,
-            credentials: {
-              accountSid: process.env.TWILIO_ACCOUNT_SID!,
-              authToken: process.env.TWILIO_AUTH_TOKEN!,
-              phoneNumber: process.env.TWILIO_PHONE_NUMBER!
-            },
-            settings: {}
-          })
-        }
-        return this.smsAdapter
-
-      case 'WHATSAPP':
-        if (!this.whatsappAdapter) {
-          this.whatsappAdapter = new WhatsAppAdapter({
-            enabled: true,
-            credentials: {
-              accountSid: process.env.TWILIO_ACCOUNT_SID!,
-              authToken: process.env.TWILIO_AUTH_TOKEN!,
-              phoneNumber: process.env.TWILIO_WHATSAPP_NUMBER!
-            },
-            settings: {}
-          })
-        }
-        return this.whatsappAdapter
-
-      case 'EMAIL':
-        if (!this.emailAdapter) {
-          this.emailAdapter = new EmailAdapter({
-            enabled: true,
-            credentials: {
-              apiKey: process.env.RESEND_API_KEY!,
-              fromEmail: process.env.RESEND_FROM_EMAIL || 'noreply@unifychat.com'
-            },
-            settings: {}
-          })
-        }
-        return this.emailAdapter
-
-      default:
-        throw new Error(`Unsupported channel: ${channel}`)
-    }
-  }
-}
-
 interface IntegrationConfig {
   sms: ChannelConfig
   whatsapp: ChannelConfig

@@ -1,5 +1,5 @@
 import { MessageService } from './db/message'
-import { IntegrationFactory } from './integrations'
+import { createIntegrationManager } from './integrations'
 import { broadcastMessageReceived } from './websocket-broadcast'
 
 export interface ScheduledMessage {
@@ -239,9 +239,9 @@ class MessageScheduler {
 
       console.log(`[SCHEDULER] Preparing to send via ${message.channel} to ${message.contact.phone || message.contact.email}`)
       
-      const integration = IntegrationFactory.getIntegration(message.channel)
+      const integrationManager = createIntegrationManager()
       
-      const result = await integration.sendMessage({
+      const result = await integrationManager.sendMessage({
         channel: message.channel.toLowerCase() as 'sms' | 'whatsapp' | 'email',
         to: message.contact.phone || message.contact.email || '',
         content: message.content,

@@ -1,6 +1,4 @@
 export { ContactInbox } from './ContactInbox'
-export { MessageComposer } from './MessageComposer'
-export { ChannelSelector } from './ChannelSelector'
 export { IntegrationAnalysis } from './IntegrationAnalysis'
 export { ContactProfileModal } from './ContactProfileModal'
 export { ScheduleMessageModal } from './ScheduleMessageModal'
