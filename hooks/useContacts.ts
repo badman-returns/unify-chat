@@ -57,12 +57,10 @@ export interface ContactRepository {
 export function useContacts(): ContactRepository {
   const [error, setError] = useState<string | null>(null)
   
-  // Use React Query for contacts data
   const queryClient = useQueryClient()
   const { data: queryContacts, isLoading: queryLoading, error: queryError } = useContactsQuery()
   const markAsReadMutation = useMarkAsReadMutation()
 
-  // Use React Query data as primary source
   const contacts: ContactWithLastMessage[] = queryContacts?.contacts?.map((contact: any) => ({
     ...contact,
     createdAt: safeParseDate(contact.createdAt),
@@ -78,7 +76,6 @@ export function useContacts(): ContactRepository {
 
 
   const findAll = async () => {
-    // React Query handles this automatically
     setError(null)
   }
 
@@ -94,7 +91,6 @@ export function useContacts(): ContactRepository {
   const create = async (data: Omit<Contact, 'id' | 'createdAt' | 'updatedAt'>) => {
     try {
       setError(null)
-      // React Query mutations handle this
       await contactsApi.create(data)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to create contact')
@@ -104,7 +100,6 @@ export function useContacts(): ContactRepository {
   const update = async (id: string, updates: Partial<Contact>) => {
     try {
       setError(null)
-      // React Query mutations handle this
       await contactsApi.update(id, updates)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to update contact')
@@ -114,7 +109,6 @@ export function useContacts(): ContactRepository {
   const deleteContact = async (id: string) => {
     try {
       setError(null)
-      // React Query mutations handle this
       await contactsApi.delete(id)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to delete contact')
@@ -183,23 +177,18 @@ export function useContacts(): ContactRepository {
 
   const clearError = () => setError(null)
 
-  // SSE handlers for real-time updates
   const handleContactCreated = useCallback((contact: any) => {
-    // Invalidate contacts query to trigger refetch
     queryClient.invalidateQueries({ queryKey: CONTACTS_QUERY_KEY })
   }, [queryClient])
 
   const handleMessageReceived = useCallback((message: any) => {
-    // Invalidate contacts query to trigger refetch with updated unread counts
     queryClient.invalidateQueries({ queryKey: CONTACTS_QUERY_KEY })
   }, [queryClient])
 
   const handleContactUpdated = useCallback((contact: any) => {
-    // Invalidate contacts query to trigger refetch
     queryClient.invalidateQueries({ queryKey: CONTACTS_QUERY_KEY })
   }, [queryClient])
 
-  // Initialize SSE connection for real-time updates
   const { isConnected, connectionStatus } = useEvents({
     onContactCreated: handleContactCreated,
     onContactUpdated: handleContactUpdated,

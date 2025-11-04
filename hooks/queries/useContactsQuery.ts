@@ -7,7 +7,9 @@ export function useContactsQuery() {
   return useQuery({
     queryKey: CONTACTS_QUERY_KEY,
     queryFn: () => contactsApi.getAll(),
-    staleTime: 2 * 60 * 1000, // 2 minutes
+    staleTime: 10000,
+    refetchOnMount: true,
+    refetchOnWindowFocus: false,
   })
 }
 

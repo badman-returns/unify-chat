@@ -64,7 +64,6 @@ export function useSignup() {
     if (password.length < 8) return 'Password must be at least 8 characters'
     if (!acceptTerms) return 'You must accept the terms and conditions'
 
-    // Basic email validation
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
     if (!emailRegex.test(email)) return 'Please enter a valid email address'
 
@@ -97,7 +96,6 @@ export function useSignup() {
           error: result.error.message || 'Signup failed' 
         }))
       } else {
-        // Success - redirect will happen automatically
         router.push('/messages')
       }
     } catch (error) {
@@ -129,12 +127,10 @@ export function useSignup() {
   }
 
   return {
-    // State
     isLoading: state.isLoading,
     error: state.error,
     form: state.form,
     
-    // Actions
     updateForm,
     clearError,
     handleEmailSignup,

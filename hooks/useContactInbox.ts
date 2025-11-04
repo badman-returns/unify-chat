@@ -5,9 +5,28 @@ import { formatTime } from '@/lib/utils'
 import { useContacts } from './useContacts'
 import { useMessaging } from './useMessaging'
 
+/**
+ * Main hook for managing the unified inbox interface
+ * Handles contact selection, message conversations, and real-time updates
+ * Integrates contact management with messaging functionality
+ * 
+ * @param selectedChannel - Filter contacts by channel (sms, whatsapp, email, or all)
+ * @returns Inbox state and actions for UI rendering
+ * 
+ * @example
+ * ```tsx
+ * const {
+ *   filteredContacts,
+ *   selectedContact,
+ *   conversation,
+ *   handleSendMessage
+ * } = useContactInbox('all')
+ * ```
+ */
 export function useContactInbox(selectedChannel: 'sms' | 'whatsapp' | 'email' | 'all') {
   const [selectedContactId, setSelectedContactId] = useState<string | null>(null)
   const [messageText, setMessageText] = useState('')
+  const [isSending, setIsSending] = useState(false)
   
   const contactRepo = useContacts()
   const messagingRepo = useMessaging()
@@ -15,13 +34,14 @@ export function useContactInbox(selectedChannel: 'sms' | 'whatsapp' | 'email' | 
   const filteredContacts = contactRepo.findByChannel(selectedChannel)
   const selectedContact = selectedContactId ? contactRepo.findById(selectedContactId) : null
   const conversation = selectedContactId ? messagingRepo.getConversation(selectedContactId) : []
+  const canLoadMore = messagingRepo.hasMore
+  const isLoadingMore = messagingRepo.isFetchingMore
+  const isContactTyping = selectedContactId ? messagingRepo.typingContacts?.has(selectedContactId) : false
 
   const handleContactSelect = async (contactId: string) => {
     setSelectedContactId(contactId)
-    // The useEffect below will handle loading the conversation
   }
 
-  // Load conversation when selectedContactId changes
   useEffect(() => {
     if (selectedContactId) {
       messagingRepo.loadConversation(selectedContactId)
@@ -31,9 +51,14 @@ export function useContactInbox(selectedChannel: 'sms' | 'whatsapp' | 'email' | 
   const handleSendMessage = async () => {
     if (!messageText.trim() || !selectedContact) return
 
+    const contentToSend = messageText
+    
+    setIsSending(true)
+    setMessageText('')
+    
     try {
       await messagingRepo.sendMessage({
-        content: messageText,
+        content: contentToSend,
         channel: selectedContact.lastMessage?.channel as any || 'sms',
         to: selectedContact.phone || selectedContact.email || '',
         metadata: {
@@ -41,9 +66,11 @@ export function useContactInbox(selectedChannel: 'sms' | 'whatsapp' | 'email' | 
           contactName: selectedContact.name
         }
       })
-      setMessageText('')
     } catch (error) {
       console.error('Failed to send message:', error)
+      setMessageText(contentToSend)
+    } finally {
+      setIsSending(false)
     }
   }
 
@@ -68,17 +95,18 @@ export function useContactInbox(selectedChannel: 'sms' | 'whatsapp' | 'email' | 
 
 
   return {
-    // State
     selectedContactId,
     messageText,
     setMessageText,
     
-    // Data
     filteredContacts,
     selectedContact,
     conversation,
+    canLoadMore,
+    isLoadingMore,
+    isContactTyping,
+    isSending,
     
-    // Repository states
     contactsLoading: contactRepo.loading,
     contactsError: contactRepo.error,
     messagingLoading: messagingRepo.loading,
@@ -86,11 +114,10 @@ export function useContactInbox(selectedChannel: 'sms' | 'whatsapp' | 'email' | 
     isConnected: contactRepo.isConnected,
     connectionStatus: contactRepo.connectionStatus,
     
-    // Actions
     handleContactSelect,
     handleSendMessage,
+    loadMoreMessages: messagingRepo.fetchNextPage,
     
-    // Utilities
     getChannelIcon,
     getStatusIcon,
     formatTime

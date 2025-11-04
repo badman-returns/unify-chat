@@ -74,7 +74,6 @@ export function useLogin() {
           error: result.error.message || 'Login failed' 
         }))
       } else {
-        // Success - redirect will happen automatically
         router.push('/messages')
       }
     } catch (error) {
@@ -106,12 +105,10 @@ export function useLogin() {
   }
 
   return {
-    // State
     isLoading: state.isLoading,
     error: state.error,
     form: state.form,
     
-    // Actions
     updateForm,
     clearError,
     handleEmailLogin,
