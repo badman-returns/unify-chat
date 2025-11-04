@@ -24,13 +24,12 @@ interface MessageEvent {
 class MetricsCollector {
   private metrics: Map<string, ChannelMetrics> = new Map()
   private events: MessageEvent[] = []
-  private maxEvents = 10000 // Keep last 10k events
+  private maxEvents = 10000
 
-  // Channel cost configurations (per message)
   private readonly channelCosts = {
-    SMS: 0.0075, // $0.0075 per SMS
-    WHATSAPP: 0.005, // $0.005 per WhatsApp message
-    EMAIL: 0.0001, // $0.0001 per email
+    SMS: 0.0075,
+    WHATSAPP: 0.005,
+    EMAIL: 0.0001,
   }
 
   constructor() {
@@ -56,15 +55,12 @@ class MetricsCollector {
   }
 
   recordMessageEvent(event: MessageEvent) {
-    // Add to events log
     this.events.push(event)
     
-    // Keep only recent events
     if (this.events.length > this.maxEvents) {
       this.events = this.events.slice(-this.maxEvents)
     }
 
-    // Update channel metrics
     this.updateChannelMetrics(event)
   }
 
@@ -74,7 +70,6 @@ class MetricsCollector {
     
     if (!metrics) return
 
-    // Update message counts
     metrics.totalMessages++
     
     if (event.status === 'sent' || event.status === 'delivered') {
@@ -83,17 +78,14 @@ class MetricsCollector {
       metrics.failedMessages++
     }
 
-    // Update cost
     const messageCost = event.cost || metrics.costPerMessage
     metrics.totalCost += messageCost
 
-    // Update latency (if provided)
     if (event.latency) {
       const totalLatency = metrics.averageLatency * (metrics.totalMessages - 1)
       metrics.averageLatency = (totalLatency + event.latency) / metrics.totalMessages
     }
 
-    // Update reliability
     metrics.reliability = (metrics.successfulMessages / metrics.totalMessages) * 100
 
     metrics.lastUpdated = new Date()
@@ -182,12 +174,10 @@ class MetricsCollector {
         totalCost: '$' + metrics.totalCost.toFixed(4),
         messageCount: metrics.totalMessages,
         costPerMessage: '$' + metrics.costPerMessage.toFixed(6),
-        percentage: 0 // Will be calculated
+        percentage: 0
       }))
     }
   }
-
-  // Performance tracking
   async measureLatency<T>(
     operation: () => Promise<T>,
     channel: string,
@@ -199,7 +189,6 @@ class MetricsCollector {
       const result = await operation()
       const latency = Date.now() - startTime
       
-      // Record the latency
       if (messageId) {
         this.recordMessageEvent({
           messageId,
@@ -231,7 +220,6 @@ class MetricsCollector {
     }
   }
 
-  // Export data for reports
   exportMetrics() {
     return {
       overview: this.getOverallMetrics(),
@@ -242,7 +230,6 @@ class MetricsCollector {
     }
   }
 
-  // Reset metrics (for testing)
   reset() {
     this.metrics.clear()
     this.events = []
@@ -250,10 +237,8 @@ class MetricsCollector {
   }
 }
 
-// Singleton instance
 export const metricsCollector = new MetricsCollector()
 
-// Helper function to record message events from other parts of the app
 export function recordMessageMetrics(event: Omit<MessageEvent, 'timestamp'>) {
   metricsCollector.recordMessageEvent({
     ...event,

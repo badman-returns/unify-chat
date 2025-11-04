@@ -4,7 +4,6 @@ import { auth } from '@/lib/auth'
 
 export async function GET(request: NextRequest) {
   try {
-    // Check authentication
     const session = await auth.api.getSession({
       headers: request.headers
     })
@@ -16,10 +15,8 @@ export async function GET(request: NextRequest) {
       )
     }
 
-    // Create integration manager
     const integrationManager = createIntegrationManager()
 
-    // Get all channel information
     const channels = integrationManager.getAllChannelInfo()
     const enabledChannels = integrationManager.getEnabledChannels()
     const metrics = integrationManager.getMetrics()
