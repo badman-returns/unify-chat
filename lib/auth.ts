@@ -2,6 +2,8 @@ import { betterAuth } from "better-auth"
 import { prismaAdapter } from "better-auth/adapters/prisma"
 import { prisma } from "./prisma"
 
+const DEFAULT_TEAM_ID = "default-team-id"
+
 export const auth = betterAuth({
   database: prismaAdapter(prisma, {
     provider: "postgresql"
@@ -36,6 +38,7 @@ export const auth = betterAuth({
       },
       teamId: {
         type: "string",
+        defaultValue: DEFAULT_TEAM_ID,
         required: false
       },
       firstName: {

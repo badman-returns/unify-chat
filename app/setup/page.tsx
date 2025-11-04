@@ -24,7 +24,6 @@ export default function SetupPage() {
   return (
     <ProtectedRoute>
       <div className="min-h-screen bg-background">
-        {/* Header */}
         <div className="border-b border-border bg-card">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="py-6">
@@ -38,7 +37,6 @@ export default function SetupPage() {
           </div>
         </div>
 
-        {/* Tabs */}
         <div className="border-b border-border bg-card">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="flex space-x-8">
@@ -64,7 +62,6 @@ export default function SetupPage() {
           </div>
         </div>
 
-        {/* Content */}
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           {activeTab === 'trial-info' && <TwilioTrialInfo />}
           {activeTab === 'whatsapp' && <WhatsAppSetup />}
