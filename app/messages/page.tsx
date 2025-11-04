@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from 'react'
-import { MessageSquare, LogOut, BarChart3, Settings } from 'lucide-react'
+import { MessageSquare, LogOut, BarChart3, Settings, Clock } from 'lucide-react'
 import { ContactInbox } from '@/components/messages/ContactInbox'
 import { ProtectedRoute } from '@/components/auth/ProtectedRoute'
 import { TrialBanner } from '@/components/messages/TrialBanner'
@@ -51,6 +51,18 @@ export default function MessagesPage() {
               </div>
               
               <div className="flex items-center space-x-3">
+                <button
+                  onClick={() => router.push('/messages/scheduled')}
+                  className={cn(
+                    interactive.button.secondary,
+                    "text-sm flex items-center space-x-2"
+                  )}
+                  title="View Scheduled Messages"
+                >
+                  <Clock className="h-4 w-4" />
+                  <span>Scheduled</span>
+                </button>
+
                 <button
                   onClick={() => router.push('/setup')}
                   className={cn(

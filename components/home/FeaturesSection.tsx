@@ -5,39 +5,33 @@ import { layout, typography, channels } from '@/lib/design-tokens'
 const features = [
   {
     icon: MessageSquare,
-    title: 'Multi-channel messaging',
-    description: 'Handle SMS, WhatsApp, and email conversations from a single, unified interface.',
-    channels: ['sms', 'whatsapp', 'email'] as const
+    title: 'Multi-Channel Messaging',
+    description: 'Send and receive messages via SMS, WhatsApp, and Email in a unified inbox.'
   },
   {
     icon: Users,
-    title: 'Team collaboration',
-    description: 'Work together with real-time presence, shared notes, and seamless handoffs.',
-    highlight: 'Real-time'
+    title: 'Contact Management',
+    description: 'Manage contacts with full conversation history, tags, and private notes.'
   },
   {
     icon: Zap,
-    title: 'Lightning fast',
-    description: 'Respond to customers in seconds with smart templates and quick actions.',
-    highlight: 'Sub-second'
+    title: 'Message Scheduling',
+    description: 'Schedule messages for future delivery with automated queue processing.'
   },
   {
     icon: BarChart3,
-    title: 'Analytics & insights',
-    description: 'Track response times, conversation volume, and team performance.',
-    highlight: 'Deep insights'
+    title: 'Channel Analytics',
+    description: 'Track message volume, response times, and engagement metrics per channel.'
   },
   {
     icon: Shield,
-    title: 'Enterprise security',
-    description: 'Bank-grade encryption, SOC 2 compliance, and role-based access controls.',
-    highlight: 'SOC 2'
+    title: 'Team Collaboration',
+    description: 'Real-time presence indicators, @mentions, and collaborative note editing with Yjs.'
   },
   {
-    icon: Globe,
-    title: 'Global scale',
-    description: 'Reach customers worldwide with local phone numbers and multi-language support.',
-    highlight: '190+ countries'
+    icon: Users,
+    title: 'Role-Based Access',
+    description: 'Secure authentication with Google OAuth and team role management (Viewer/Editor/Admin).'
   }
 ]
 
@@ -69,30 +63,6 @@ export function FeaturesSection() {
                   <p className="mt-2 text-sm text-muted-foreground leading-6">
                     {feature.description}
                   </p>
-                  
-                  {feature.channels && (
-                    <div className="mt-3 flex gap-2">
-                      {feature.channels.map((channel) => (
-                        <span
-                          key={channel}
-                          className={cn(
-                            "inline-flex items-center rounded-full border px-2 py-1 text-xs font-medium",
-                            channels[channel]
-                          )}
-                        >
-                          {channel.toUpperCase()}
-                        </span>
-                      ))}
-                    </div>
-                  )}
-                  
-                  {feature.highlight && (
-                    <div className="mt-3">
-                      <span className="inline-flex items-center rounded-full bg-primary/10 px-2 py-1 text-xs font-medium text-primary">
-                        {feature.highlight}
-                      </span>
-                    </div>
-                  )}
                 </div>
               </div>
             ))}

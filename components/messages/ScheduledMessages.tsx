@@ -48,34 +48,45 @@ export function ScheduledMessages({ userId }: ScheduledMessagesProps) {
             key={message.id}
             className="bg-card border border-border rounded-lg p-4 hover:border-primary/50 transition-colors"
           >
-            <div className="flex items-start justify-between mb-2">
-              <div className="flex items-center space-x-2">
-                <span className={cn(
-                  "px-2 py-1 rounded text-xs font-medium border",
-                  getChannelColor(message.channel)
-                )}>
-                  {message.channel}
-                </span>
-                <span className="text-sm text-muted-foreground">
-                  to {message.contactName || message.to}
-                </span>
+            <div className="flex items-start justify-between mb-3">
+              <div className="flex-1">
+                <div className="flex items-center space-x-2 mb-2">
+                  <span className={cn(
+                    "px-2 py-1 rounded text-xs font-medium border",
+                    getChannelColor(message.channel)
+                  )}>
+                    {message.channel.toUpperCase()}
+                  </span>
+                  <span className="text-sm font-medium text-foreground">
+                    {message.contactName || message.to || 'Unknown recipient'}
+                  </span>
+                </div>
+                <p className="text-sm text-foreground line-clamp-2 mb-2">
+                  {message.content}
+                </p>
+                <div className="flex items-center text-xs text-muted-foreground">
+                  <Clock className="h-3 w-3 mr-1" />
+                  {new Date(message.scheduledAt) > new Date() 
+                    ? `Sending in ${Math.round((new Date(message.scheduledAt).getTime() - Date.now()) / 60000)} minutes`
+                    : 'Sending now...'
+                  }
+                  <span className="mx-2">•</span>
+                  {new Date(message.scheduledAt).toLocaleString('en-US', {
+                    month: 'short',
+                    day: 'numeric',
+                    hour: 'numeric',
+                    minute: '2-digit',
+                    hour12: true
+                  })}
+                </div>
               </div>
               <button
                 onClick={() => cancelScheduledMessage(message.id)}
-                className="text-muted-foreground hover:text-red-500 transition-colors"
+                className="text-muted-foreground hover:text-red-500 transition-colors ml-4"
                 title="Cancel scheduled message"
               >
                 <X className="h-4 w-4" />
               </button>
-            </div>
-
-            <p className="text-sm text-foreground mb-3 line-clamp-2">
-              {message.content}
-            </p>
-
-            <div className="flex items-center text-xs text-muted-foreground">
-              <Clock className="h-3 w-3 mr-1" />
-              Scheduled for {formatMessageTime(message.scheduledAt)}
             </div>
           </div>
         ))}

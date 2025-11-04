@@ -7,14 +7,15 @@ export function HeroSection() {
     <section className={cn(layout.section, "pt-20 pb-16")}>
       <div className={layout.container}>
         <div className="mx-auto max-w-4xl text-center">
-          <h1 className="text-4xl font-bold tracking-tight text-foreground sm:text-5xl lg:text-6xl">
-            The best messaging platform for growing customer relationships
-          </h1>
-          
-          <p className="mt-6 text-xl leading-8 text-muted-foreground max-w-3xl mx-auto">
-            UnifyChat brings your SMS, WhatsApp, and email together in one shared workspace. 
-            Keep your team aligned, respond faster, and ensure every customer feels valued.
-          </p>
+          <h1 className="text-4xl sm:text-5xl md:text-6xl font-bold text-foreground mb-6">
+          Unified Multi-Channel
+          <br />
+          <span className="text-primary">Customer Inbox</span>
+        </h1>
+        <p className="text-lg sm:text-xl text-muted-foreground mb-8 max-w-2xl mx-auto">
+          Manage customer conversations across SMS, WhatsApp, and Email in one unified inbox.
+          Schedule messages, collaborate with your team, and track analytics.
+        </p>
           
           <div className="mt-10 flex items-center justify-center gap-4">
             <Link
@@ -36,6 +37,21 @@ export function HeroSection() {
             >
               Product demo
             </Link>
+          </div>
+          
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-8 mt-16">
+            <div className="text-center">
+              <div className="text-3xl font-bold text-foreground mb-2">3</div>
+              <div className="text-sm text-muted-foreground">Channel Integrations</div>
+            </div>
+            <div className="text-center">
+              <div className="text-3xl font-bold text-foreground mb-2">Real-time</div>
+              <div className="text-sm text-muted-foreground">Collaboration</div>
+            </div>
+            <div className="text-center">
+              <div className="text-3xl font-bold text-foreground mb-2">Twilio</div>
+              <div className="text-sm text-muted-foreground">Powered</div>
+            </div>
           </div>
           
           <div className="mt-8 text-center">

@@ -281,7 +281,7 @@ class MessageScheduler {
   }) {
     try {
       const { prisma } = await import('./db')
-      return await prisma.message.findMany({
+      const messages = await prisma.message.findMany({
         where: {
           ...filters,
           scheduledAt: {
@@ -290,12 +290,27 @@ class MessageScheduler {
           status: 'SCHEDULED'
         },
         include: {
-          contact: true
+          contact: {
+            select: {
+              name: true,
+              phone: true,
+              email: true
+            }
+          }
         },
         orderBy: {
           scheduledAt: 'asc'
         }
       })
+
+      return messages.map(msg => ({
+        id: msg.id,
+        content: msg.content,
+        channel: msg.channel,
+        scheduledAt: msg.scheduledAt,
+        to: (msg.metadata as any)?.to || msg.contact?.phone || msg.contact?.email || '',
+        contactName: msg.contact?.name || (msg.metadata as any)?.contactName || null
+      }))
     } catch (error) {
       console.error('Error fetching user scheduled messages:', error)
       return []
